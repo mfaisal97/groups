@@ -1,1 +1,1 @@
-go run main.go < input.txt > output.txt
+go run *.go reset < input.txt > output.txt
