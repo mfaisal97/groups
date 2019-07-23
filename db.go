@@ -159,7 +159,9 @@ func (db *DataBase) ConfirmGroupCreationRequest(groupCreationRequest GroupCreati
 
 		if _, exist := db.Groups[groupCreationRequest.Group.Name]; exist {
 			fmt.Printf("This Group Already Exists: %s", groupCreationRequest.Group.Name)
-			return -1
+			db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+			db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+			return GroupCreationResponse{false}
 		}
 
 		//ensuring that each user exits once

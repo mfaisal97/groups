@@ -47,7 +47,7 @@ type GroupCreationRequest struct {
 }
 
 type GroupCreationResponse struct {
-	Accepting bool
+	Accepted bool
 }
 
 type GroupCreationMessage struct {
@@ -76,7 +76,7 @@ type UserRequest struct {
 }
 
 type UserResponse struct {
-	Accepting bool
+	Accepted bool
 }
 
 type UserMessage struct {
