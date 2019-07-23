@@ -1,14 +1,18 @@
 package main
 
+import "golang.org/x/crypto/ed25519"
+
 //alternatives
 type Role string
 type RequestType string
 type MembershipRequestType string
-type Hash string
-type EncryptedHash string
+
+//type Hash string
+//type EncryptedHash string
 type Data string
-type PublicKey string
-type PrivateKey string
+
+//type PublicKey []byte  //---> already implemented in crypto/ed25519
+//type PrivateKey []byte //---> already implemented in crypto/ed25519
 
 type Group struct {
 	id          string
@@ -22,10 +26,18 @@ type Group struct {
 	membersauthorizations map[UserID][]RequestType
 }
 
-type GroupCreationRequest struct {
-	num       int32
-	group     Group
+type DataBaseRequest struct {
+	rquestNum int32
 	signature Signature
+}
+
+type DataBaseMessage struct {
+	messageStatus MessageStatus
+}
+
+type GroupCreationRequest struct {
+	DataBaseRequest
+	group Group
 }
 
 type GroupCreationResponse struct {
@@ -34,19 +46,38 @@ type GroupCreationResponse struct {
 }
 
 type GroupCreationMessage struct {
+	DataBaseMessage
 	request  GroupCreationRequest
 	response GroupCreationResponse
 }
 
 type MembershipRequest struct {
+	DataBaseRequest
 }
 
 type MembershipResponse struct {
 }
 
 type MembershipMessage struct {
+	DataBaseMessage
 	request  MembershipRequest
 	response MembershipResponse
+}
+
+type UserRequest struct {
+	DataBaseRequest
+	name       UserID
+	publlicKey ed25519.PublicKey
+}
+
+type UserResponse struct {
+	Accepted bool
+}
+
+type UserMessage struct {
+	DataBaseMessage
+	request  *UserRequest
+	response *UserResponse
 }
 
 // type Membership struct {
@@ -58,9 +89,8 @@ type MembershipMessage struct {
 // }
 
 type Signature struct {
-	requestNum    int
-	hash          Hash
-	encryptedhash EncryptedHash
+	hash          [32]byte
+	encryptedhash []byte
 }
 
 //enums

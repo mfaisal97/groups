@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -13,9 +15,20 @@ func ResetDataBase(c *cli.Context) {
 	data.ResetDataBase()
 }
 
+func CreateUser(c *cli.Context) {
+	if c.NArg() != 1 {
+		_ = errors.New("please give the following argument: UserID")
+		return
+	}
+	userid := c.Args().First()
+	_ = CreateNewUser(UserID(userid))
+
+}
+
 func main() {
 	data := InitializeDataBase()
 	data.LoadData("Data/data.json")
+	fmt.Println(data)
 
 	cliApp := cli.NewApp()
 	cliApp.Name = "Groups-Management"
@@ -29,8 +42,8 @@ func main() {
 		{
 			Name:      "createUser",
 			Usage:     "Creates a new user in the data base",
-			ArgsUsage: "Username",
-			Action:    data.ResetDataBase,
+			ArgsUsage: "UserID",
+			Action:    CreateUser,
 		},
 	}
 	cliApp.Flags = []cli.Flag{
