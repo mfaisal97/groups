@@ -31,7 +31,7 @@ type DataBase struct {
 func InitializeDataBase() DataBase {
 	var db DataBase
 
-	db.Users = make(map[UserID]ed25519.PublicKey)
+	db.Users = make(map[UserID]ed25519.PublicKey, 0)
 	db.GroupCreationIndex = 0
 	db.MembershipIndex = 0
 	db.UsersIndex = 0
@@ -39,13 +39,13 @@ func InitializeDataBase() DataBase {
 	return db
 }
 
-func (db DataBase) ResetDataBase() {
+func (db *DataBase) ResetDataBase() {
 	fileName := db.FileName
-	db = InitializeDataBase()
+	*db = InitializeDataBase()
 	db.SaveData(fileName)
 }
 
-func (db DataBase) LoadData(fileName string) {
+func (db *DataBase) LoadData(fileName string) {
 	db.FileName = fileName
 
 	dbFile, err := os.Open(fileName)
@@ -61,55 +61,54 @@ func (db DataBase) LoadData(fileName string) {
 	return
 }
 
-func (db DataBase) SaveData(fileName string) {
+func (db *DataBase) SaveData(fileName string) {
 	db.FileName = fileName
 	file, _ := json.MarshalIndent(db, "", " ")
 	_ = ioutil.WriteFile(fileName, file, 0644)
 	return
 }
 
-func (db DataBase) GetRequestNumber(userRequest UserRequest) int32 {
-	userRequest.DataBaseRequest.rquestNum = db.UsersIndex
+func (db *DataBase) GetRequestNumber(userRequest UserRequest) int32 {
+	userRequest.DataBaseRequest.RequestNum = db.UsersIndex
 
 	newUserMessage := UserMessage{}
 
-	newUserMessage.request = userRequest
+	newUserMessage.Request = userRequest
 
-	jsonString, err := json.Marshal(newUserMessage.request)
+	jsonString, err := json.Marshal(newUserMessage.Request)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
 		return -1
 	}
-	newUserMessage.request.signature.hash = sha256.Sum256([]byte(jsonString))
+	newUserMessage.Request.Signature.Hash = sha256.Sum256([]byte(jsonString))
 
-	newUserMessage.messageStatus = 0
-	fmt.Println(db)
-	fmt.Println("Adding:", newUserMessage)
+	newUserMessage.MessageStatus = 0
+
 	db.UserMessages = append(db.UserMessages, newUserMessage)
-	fmt.Println("After:", db.UserMessages)
-	defer db.IncreaseUsersIndex()
-	return newUserMessage.request.rquestNum
+
+	db.IncreaseUsersIndex()
+
+	defer db.SaveData(db.FileName)
+	return newUserMessage.Request.RequestNum
 }
 
-func (db DataBase) IncreaseUsersIndex() {
+func (db *DataBase) IncreaseUsersIndex() {
 	db.UsersIndex = db.UsersIndex + 1
-	fmt.Println("After After:", db.UserMessages)
 }
 
-func (db DataBase) ConfirmRequest(userRequest UserRequest) UserResponse {
-	requestNumber := userRequest.rquestNum
+func (db *DataBase) ConfirmRequest(userRequest UserRequest) UserResponse {
+	requestNumber := userRequest.RequestNum
 
-	fmt.Println("Using RN:", requestNumber)
-	fmt.Println("In:", db.UserMessages)
 	userMessage := db.UserMessages[requestNumber]
 
-	if userMessage.request.signature.hash == userRequest.signature.hash &&
-		ed25519.Verify(userMessage.request.publlicKey, []byte(userMessage.request.signature.hash[:]), userRequest.signature.encryptedhash) {
-		db.UserMessages[requestNumber].request.signature.encryptedhash = userRequest.signature.encryptedhash
-		db.UserMessages[requestNumber].response = UserResponse{true}
-		db.UserMessages[requestNumber].DataBaseMessage.messageStatus = Succeeded
+	if userMessage.Request.Signature.Hash == userRequest.Signature.Hash &&
+		ed25519.Verify(userMessage.Request.PubllicKey, []byte(userMessage.Request.Signature.Hash[:]), userRequest.Signature.Encryptedhash) {
+		db.UserMessages[requestNumber].Request.Signature.Encryptedhash = userRequest.Signature.Encryptedhash
+		db.UserMessages[requestNumber].Response = UserResponse{true}
+		db.UserMessages[requestNumber].DataBaseMessage.MessageStatus = Succeeded
+		defer db.SaveData(db.FileName)
 
-		return db.UserMessages[requestNumber].response
+		return db.UserMessages[requestNumber].Response
 	}
 
 	return UserResponse{false}

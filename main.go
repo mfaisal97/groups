@@ -22,13 +22,12 @@ func CreateUser(c *cli.Context) {
 	}
 	userid := c.Args().First()
 	_ = CreateNewUser(UserID(userid))
-
 }
 
 func main() {
-	data := InitializeDataBase()
+	data = InitializeDataBase()
 	data.LoadData("Data/data.json")
-	fmt.Println(data)
+	fmt.Println("Starting\t", data)
 
 	cliApp := cli.NewApp()
 	cliApp.Name = "Groups-Management"
@@ -53,8 +52,7 @@ func main() {
 			Usage: "debug-level: 1 for terse, 5 for maximal",
 		},
 	}
-	cliApp.Before = func(c *cli.Context) error {
-		//log.SetDebugVisible(c.Int("debug"))
+	cliApp.After = func(c *cli.Context) error {
 		return nil
 	}
 
@@ -63,4 +61,5 @@ func main() {
 		log.Fatal(err)
 	}
 	data.SaveData("Data/data.json")
+	fmt.Println("Ending\t", data, "\n\n")
 }

@@ -15,40 +15,40 @@ type Data string
 //type PrivateKey []byte //---> already implemented in crypto/ed25519
 
 type Group struct {
-	id          string
-	name        string
-	description string
-	data        map[RequestType]Data
+	Id          string
+	Name        string
+	Description string
+	Data        map[RequestType]Data
 
-	members               []UserID
-	memberships           map[Role][]UserID
-	authorizations        map[RequestType][]Role
-	membersauthorizations map[UserID][]RequestType
+	Members               []UserID
+	Memberships           map[Role][]UserID
+	Authorizations        map[RequestType][]Role
+	Membersauthorizations map[UserID][]RequestType
 }
 
 type DataBaseRequest struct {
-	rquestNum int32
-	signature Signature
+	RequestNum int32
+	Signature  Signature
 }
 
 type DataBaseMessage struct {
-	messageStatus MessageStatus
+	MessageStatus MessageStatus
 }
 
 type GroupCreationRequest struct {
 	DataBaseRequest
-	group Group
+	Group Group
 }
 
 type GroupCreationResponse struct {
-	num       int32
-	signature Signature
+	Num       int32
+	Signature Signature
 }
 
 type GroupCreationMessage struct {
 	DataBaseMessage
-	request  GroupCreationRequest
-	response GroupCreationResponse
+	Request  GroupCreationRequest
+	Response GroupCreationResponse
 }
 
 type MembershipRequest struct {
@@ -60,14 +60,14 @@ type MembershipResponse struct {
 
 type MembershipMessage struct {
 	DataBaseMessage
-	request  MembershipRequest
-	response MembershipResponse
+	Request  MembershipRequest
+	Response MembershipResponse
 }
 
 type UserRequest struct {
 	DataBaseRequest
-	name       UserID
-	publlicKey ed25519.PublicKey
+	UserID     UserID
+	PubllicKey ed25519.PublicKey
 }
 
 type UserResponse struct {
@@ -76,8 +76,8 @@ type UserResponse struct {
 
 type UserMessage struct {
 	DataBaseMessage
-	request  UserRequest
-	response UserResponse
+	Request  UserRequest
+	Response UserResponse
 }
 
 // type Membership struct {
@@ -89,8 +89,8 @@ type UserMessage struct {
 // }
 
 type Signature struct {
-	hash          [32]byte
-	encryptedhash []byte
+	Hash          [32]byte
+	Encryptedhash []byte
 }
 
 //enums

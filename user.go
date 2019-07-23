@@ -15,8 +15,8 @@ import (
 type UserID string
 
 type User struct {
-	publicKey  ed25519.PublicKey
-	privateKey ed25519.PrivateKey
+	PublicKey  ed25519.PublicKey
+	PrivateKey ed25519.PrivateKey
 }
 
 func CreateNewUser(userid UserID) User {
@@ -26,34 +26,30 @@ func CreateNewUser(userid UserID) User {
 	if err != nil {
 		log.Fatal(err)
 	}
-	user.publicKey = pub
-	user.privateKey = pv
+	user.PublicKey = pub
+	user.PrivateKey = pv
 
 	userRequest := UserRequest{}
-	userRequest.name = userid
-	userRequest.publlicKey = user.publicKey
+	userRequest.UserID = userid
+	userRequest.PubllicKey = user.PublicKey
 
 	requestNum := data.GetRequestNumber(userRequest)
-	data.IncreaseUsersIndex()
-	fmt.Println("Got Request Number:\t\t", requestNum)
 	if requestNum == -1 {
 		_ = fmt.Errorf("Couldnot Get Request Number for New User Creation")
 		return user
 	}
-
 	fmt.Println("Got Request Number:\t\t", requestNum)
 
-	userRequest.rquestNum = requestNum
+	userRequest.RequestNum = requestNum
 
 	jsonString, err := json.Marshal(userRequest)
 	if err != nil {
 		_ = fmt.Errorf("Error: %s", err)
 		return user
 	}
-	userRequest.signature.hash = sha256.Sum256([]byte(jsonString))
-	userRequest.signature.encryptedhash = ed25519.Sign(pv, []byte(userRequest.signature.hash[:]))
+	userRequest.Signature.Hash = sha256.Sum256([]byte(jsonString))
+	userRequest.Signature.Encryptedhash = ed25519.Sign(pv, []byte(userRequest.Signature.Hash[:]))
 
-	data.IncreaseUsersIndex()
 	if !data.ConfirmRequest(userRequest).Accepted {
 		_ = fmt.Errorf("Error: Signature was not accepted")
 		return user
@@ -61,11 +57,10 @@ func CreateNewUser(userid UserID) User {
 
 	fmt.Println("New User was created !")
 	user.SaveUser(userid)
-
 	return user
 }
 
-func (user User) LoadData(userid UserID) {
+func (user *User) LoadData(userid UserID) {
 	userFile, err := os.Open(string(userid) + ".json")
 	if err != nil {
 		fmt.Println(err)
@@ -78,7 +73,7 @@ func (user User) LoadData(userid UserID) {
 	return
 }
 
-func (user User) SaveUser(userid UserID) {
+func (user *User) SaveUser(userid UserID) {
 	file, _ := json.MarshalIndent(user, "", " ")
 	_ = ioutil.WriteFile(string(userid)+".json", file, 0644)
 	return
