@@ -76,8 +76,8 @@ type UserResponse struct {
 
 type UserMessage struct {
 	DataBaseMessage
-	request  *UserRequest
-	response *UserResponse
+	request  UserRequest
+	response UserResponse
 }
 
 // type Membership struct {
