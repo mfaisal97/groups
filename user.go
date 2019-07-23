@@ -78,3 +78,34 @@ func (user *User) SaveUser(userid UserID) {
 	_ = ioutil.WriteFile(string(userid)+".json", file, 0644)
 	return
 }
+
+func (user *User) CreateGroup(group Group) {
+
+	groupCreationRequest := GroupCreationRequest{}
+	groupCreationRequest.Group = group
+
+	requestNum := data.GetGroupCreationRequestNumber(groupCreationRequest)
+	if requestNum == -1 {
+		_ = fmt.Errorf("Couldnot Get Request Number for New Group Creation")
+		return
+	}
+	fmt.Println("Got Request Number:\t\t", requestNum)
+
+	groupCreationRequest.RequestNum = requestNum
+
+	jsonString, err := json.Marshal(groupCreationRequest)
+	if err != nil {
+		_ = fmt.Errorf("Error: %s", err)
+		return
+	}
+	groupCreationRequest.Signature.Hash = sha256.Sum256([]byte(jsonString))
+	groupCreationRequest.Signature.Encryptedhash = ed25519.Sign(user.PrivateKey, []byte(groupCreationRequest.Signature.Hash[:]))
+
+	if !data.ConfirmGroupCreationRequest(groupCreationRequest).Accepted {
+		_ = fmt.Errorf("Error: Signature was not accepted")
+		return
+	}
+
+	fmt.Println("New Group was created !")
+	return
+}

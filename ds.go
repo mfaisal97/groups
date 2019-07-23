@@ -15,10 +15,12 @@ type Data string
 //type PrivateKey []byte //---> already implemented in crypto/ed25519
 
 type Group struct {
-	Id          string
+	//	Id          string
 	Name        string
 	Description string
 	Data        map[RequestType]Data
+
+	Creator UserID
 
 	Members               []UserID
 	Memberships           map[Role][]UserID
@@ -31,6 +33,10 @@ type DataBaseRequest struct {
 	Signature  Signature
 }
 
+type DataBaseResponse struct {
+	Accepted bool
+}
+
 type DataBaseMessage struct {
 	MessageStatus MessageStatus
 }
@@ -41,8 +47,7 @@ type GroupCreationRequest struct {
 }
 
 type GroupCreationResponse struct {
-	Num       int32
-	Signature Signature
+	Accepting bool
 }
 
 type GroupCreationMessage struct {
@@ -71,7 +76,7 @@ type UserRequest struct {
 }
 
 type UserResponse struct {
-	Accepted bool
+	Accepting bool
 }
 
 type UserMessage struct {
@@ -98,7 +103,8 @@ type MessageStatus int
 
 const (
 	Received  MessageStatus = 0
-	Sent      MessageStatus = 1
-	Succeeded MessageStatus = 2
-	Failed    MessageStatus = 3
+	Confirmed MessageStatus = 1
+	Sent      MessageStatus = 2
+	Succeeded MessageStatus = 3
+	Failed    MessageStatus = 4
 )

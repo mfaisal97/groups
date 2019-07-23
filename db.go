@@ -15,7 +15,7 @@ import (
 type DataBase struct {
 	FileName string
 
-	Groups []Group
+	Groups map[string]Group
 	Users  map[UserID]ed25519.PublicKey
 
 	GroupCreationMessages []GroupCreationMessage
@@ -80,6 +80,12 @@ func (db *DataBase) GetRequestNumber(userRequest UserRequest) int32 {
 		fmt.Printf("Error: %s", err)
 		return -1
 	}
+
+	if _, exist := db.Users[userRequest.UserID]; exist {
+		fmt.Printf("This UserID Already Exists: %s", userRequest.UserID)
+		return -1
+	}
+
 	newUserMessage.Request.Signature.Hash = sha256.Sum256([]byte(jsonString))
 
 	newUserMessage.MessageStatus = 0
@@ -106,10 +112,113 @@ func (db *DataBase) ConfirmRequest(userRequest UserRequest) UserResponse {
 		db.UserMessages[requestNumber].Request.Signature.Encryptedhash = userRequest.Signature.Encryptedhash
 		db.UserMessages[requestNumber].Response = UserResponse{true}
 		db.UserMessages[requestNumber].DataBaseMessage.MessageStatus = Succeeded
+		db.Users[userRequest.UserID] = userRequest.PubllicKey
 		defer db.SaveData(db.FileName)
 
 		return db.UserMessages[requestNumber].Response
 	}
 
 	return UserResponse{false}
+}
+
+func (db *DataBase) GetGroupCreationRequestNumber(groupCreationRequest GroupCreationRequest) int32 {
+	groupCreationRequest.DataBaseRequest.RequestNum = db.GroupCreationIndex
+
+	newGroupCreationMessage := GroupCreationMessage{}
+	newGroupCreationMessage.Request = groupCreationRequest
+
+	jsonString, err := json.Marshal(newGroupCreationMessage.Request)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return -1
+	}
+	newGroupCreationMessage.Request.Signature.Hash = sha256.Sum256([]byte(jsonString))
+
+	newGroupCreationMessage.MessageStatus = 0
+
+	db.GroupCreationMessages = append(db.GroupCreationMessages, newGroupCreationMessage)
+
+	db.IncreaseGroupCreationIndex()
+
+	defer db.SaveData(db.FileName)
+	return newGroupCreationMessage.Request.RequestNum
+}
+
+func (db *DataBase) IncreaseGroupCreationIndex() {
+	db.GroupCreationIndex = db.GroupCreationIndex + 1
+}
+
+func (db *DataBase) ConfirmGroupCreationRequest(groupCreationRequest GroupCreationRequest) GroupCreationResponse {
+
+	requestNumber := groupCreationRequest.RequestNum
+
+	groupCreationMessage := db.GroupCreationMessages[requestNumber]
+
+	if groupCreationMessage.Request.Signature.Hash == groupCreationRequest.Signature.Hash &&
+		ed25519.Verify(db.Users[groupCreationMessage.Request.Group.Creator], []byte(groupCreationMessage.Request.Signature.Hash[:]), groupCreationRequest.Signature.Encryptedhash) {
+
+		if _, exist := db.Groups[groupCreationRequest.Group.Name]; exist {
+			fmt.Printf("This Group Already Exists: %s", groupCreationRequest.Group.Name)
+			return -1
+		}
+
+		//ensuring that each user exits once
+		set := make(map[UserID]bool)
+		for k := range groupCreationRequest.Group.Members {
+			set[groupCreationRequest.Group.Members[k]] = true
+		}
+		if len(set) != len(groupCreationRequest.Group.Members) {
+			fmt.Println("Error: Request Contains Reptited Members")
+			db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+			db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+			return GroupCreationResponse{false}
+		}
+
+		//ensuring all memebers are users
+		for k := range groupCreationRequest.Group.Members {
+			if _, exist := db.Users[groupCreationRequest.Group.Members[k]]; !exist {
+				fmt.Println("Error: Request Contains not registered Members")
+				db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+				db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+				return GroupCreationResponse{false}
+			}
+		}
+
+		//ensuring that the members in each role are in the group members
+
+		for key, val := range groupCreationRequest.Group.Memberships {
+
+			set2 := make(map[UserID]bool)
+			for k := range val {
+				set[val[k]] = true
+			}
+			if len(set2) != len(val) {
+				fmt.Println("Error: Request Contains Reptited Members in Role:\t", key)
+				db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+				db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+				return GroupCreationResponse{false}
+			}
+
+			//ensuring all role memebers are members
+			for k := range val {
+				if exist := set[val[k]]; !exist {
+					fmt.Println("Error: Role members Contains non Members in Role:\t", key)
+					db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+					db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+					return GroupCreationResponse{false}
+				}
+			}
+
+		}
+
+		db.GroupCreationMessages[requestNumber].Request.Signature.Encryptedhash = groupCreationRequest.Signature.Encryptedhash
+		db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{true}
+		db.GroupCreationMessages[requestNumber].DataBaseMessage.MessageStatus = Succeeded
+		db.Groups[groupCreationRequest.Group.Name] = groupCreationRequest.Group
+		defer db.SaveData(db.FileName)
+
+		return db.GroupCreationMessages[requestNumber].Response
+	}
+
+	return GroupCreationResponse{false}
 }
