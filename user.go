@@ -15,6 +15,7 @@ import (
 type UserID string
 
 type User struct {
+	UserID
 	PublicKey  ed25519.PublicKey
 	PrivateKey ed25519.PrivateKey
 }
@@ -28,6 +29,7 @@ func CreateNewUser(userid UserID) User {
 	}
 	user.PublicKey = pub
 	user.PrivateKey = pv
+	user.UserID = userid
 
 	userRequest := UserRequest{}
 	userRequest.UserID = userid
@@ -107,5 +109,38 @@ func (user *User) CreateGroup(group Group) {
 	}
 
 	fmt.Println("New Group was created !")
+	return
+}
+
+func (user *User) SendMembershipRequest(membershipRequestType MembershipRequestType, group string) {
+
+	membershipRequest := MembershipRequest{}
+	membershipRequest.UserID = user.UserID
+	membershipRequest.GroupName = group
+	membershipRequest.MembershipRequestType = membershipRequestType
+
+	requestNum := data.GetMembershipRequestNumber(membershipRequest)
+	if requestNum == -1 {
+		_ = fmt.Errorf("Couldnot Get Request Number for New Group Creation")
+		return
+	}
+	fmt.Println("Got Request Number:\t\t", requestNum)
+
+	membershipRequest.RequestNum = requestNum
+
+	jsonString, err := json.Marshal(membershipRequest)
+	if err != nil {
+		_ = fmt.Errorf("Error: %s", err)
+		return
+	}
+	membershipRequest.Signature.Hash = sha256.Sum256([]byte(jsonString))
+	membershipRequest.Signature.Encryptedhash = ed25519.Sign(user.PrivateKey, []byte(membershipRequest.Signature.Hash[:]))
+
+	if data.ConfirmMembershipRequest(membershipRequest) != Confirmed {
+		_ = fmt.Errorf("Error: Signature was not accepted")
+		return
+	}
+
+	fmt.Println("New Membership Request was created !")
 	return
 }

@@ -224,3 +224,53 @@ func (db *DataBase) ConfirmGroupCreationRequest(groupCreationRequest GroupCreati
 
 	return GroupCreationResponse{false}
 }
+
+func (db *DataBase) GetMembershipRequestNumber(membershipRequest MembershipRequest) int32 {
+	membershipRequest.DataBaseRequest.RequestNum = db.MembershipIndex
+
+	newMembershipMessage := MembershipMessage{}
+
+	newMembershipMessage.Request = membershipRequest
+
+	jsonString, err := json.Marshal(newMembershipMessage.Request)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return -1
+	}
+
+	if _, exist := db.Users[membershipRequest.UserID]; !exist {
+		fmt.Printf("This UserID Doesnot Exist: %s", membershipRequest.UserID)
+		return -1
+	}
+
+	newMembershipMessage.Request.Signature.Hash = sha256.Sum256([]byte(jsonString))
+	newMembershipMessage.MessageStatus = 0
+
+	db.MembershipsMessages = append(db.MembershipsMessages, newMembershipMessage)
+
+	db.IncreaseMembershipIndex()
+
+	defer db.SaveData(db.FileName)
+	return newMembershipMessage.Request.RequestNum
+}
+
+func (db *DataBase) IncreaseMembershipIndex() {
+	db.MembershipIndex = db.MembershipIndex + 1
+}
+
+func (db *DataBase) ConfirmMembershipRequest(membershipRequest MembershipRequest) MessageStatus {
+	requestNumber := membershipRequest.RequestNum
+
+	MembershipMessage := db.MembershipsMessages[requestNumber]
+
+	if MembershipMessage.Request.Signature.Hash == membershipRequest.Signature.Hash &&
+		ed25519.Verify(db.Users[membershipRequest.UserID], []byte(MembershipMessage.Request.Signature.Hash[:]), membershipRequest.Signature.Encryptedhash) {
+		db.UserMessages[requestNumber].Request.Signature.Encryptedhash = membershipRequest.Signature.Encryptedhash
+		db.UserMessages[requestNumber].DataBaseMessage.MessageStatus = Confirmed
+		defer db.SaveData(db.FileName)
+
+		return Confirmed
+	}
+
+	return ConfirmationFailed
+}

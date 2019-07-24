@@ -4,8 +4,9 @@ import "golang.org/x/crypto/ed25519"
 
 //alternatives
 type Role string
-type RequestType string
-type MembershipRequestType string
+
+// type RequestType string
+//type MembershipRequestType string
 
 //type Hash string
 //type EncryptedHash string
@@ -18,14 +19,14 @@ type Group struct {
 	//	Id          string
 	Name        string
 	Description string
-	Data        map[RequestType]Data
+	// Data        map[RequestType]Data
 
 	Creator UserID
 
-	Members               []UserID
-	Memberships           map[Role][]UserID
-	Authorizations        map[RequestType][]Role
-	Membersauthorizations map[UserID][]RequestType
+	Members        []UserID
+	Memberships    map[Role][]UserID
+	Authorizations map[MembershipRequestType][]Role
+	//Membersauthorizations map[UserID][]RequestType
 }
 
 type DataBaseRequest struct {
@@ -58,9 +59,13 @@ type GroupCreationMessage struct {
 
 type MembershipRequest struct {
 	DataBaseRequest
+	UserID UserID
+	MembershipRequestType
+	GroupName string
 }
 
 type MembershipResponse struct {
+	Accepted bool
 }
 
 type MembershipMessage struct {
@@ -102,9 +107,17 @@ type Signature struct {
 type MessageStatus int
 
 const (
-	Received  MessageStatus = 0
-	Confirmed MessageStatus = 1
-	Sent      MessageStatus = 2
-	Succeeded MessageStatus = 3
-	Failed    MessageStatus = 4
+	Received           MessageStatus = 0
+	Confirmed          MessageStatus = 1
+	Sent               MessageStatus = 2
+	Succeeded          MessageStatus = 3
+	ConfirmationFailed MessageStatus = 4
+	Failed             MessageStatus = 5
+)
+
+type MembershipRequestType int
+
+const (
+	Join   MembershipRequestType = 0
+	Remove MembershipRequestType = 1
 )
