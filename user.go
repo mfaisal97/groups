@@ -112,9 +112,11 @@ func (user *User) CreateGroup(group Group) {
 	return
 }
 
-func (user *User) SendMembershipRequest(membershipRequestType MembershipRequestType, group string) {
+func (user *User) SendMembershipRequest(membershipRequestType MembershipRequestType, group string, affectedMember UserID, affectedRole Role) {
 
 	membershipRequest := MembershipRequest{}
+	membershipRequest.AffectedMember = affectedMember
+	membershipRequest.AffectedRole = affectedRole
 	membershipRequest.UserID = user.UserID
 	membershipRequest.GroupName = group
 	membershipRequest.MembershipRequestType = membershipRequestType
@@ -149,35 +151,30 @@ func (user *User) GetPendingRequests(groupName string) ([]int32, []MembershipReq
 	return data.GetPendingRequests(user.UserID, groupName)
 }
 
-// func (user *User) SendMembershipReesponse(membershipRequestType MembershipRequestType, group string) {
-//
-// 	membershipRequest := MembershipRequest{}
-// 	membershipRequest.UserID = user.UserID
-// 	membershipRequest.GroupName = group
-// 	membershipRequest.MembershipRequestType = membershipRequestType
-//
-// 	requestNum := data.GetMembershipRequestNumber(membershipRequest)
-// 	if requestNum == -1 {
-// 		_ = fmt.Errorf("Couldnot Get Request Number for New Group Creation")
-// 		return
-// 	}
-// 	fmt.Println("Got Request Number:\t\t", requestNum)
-//
-// 	membershipRequest.RequestNum = requestNum
-//
-// 	jsonString, err := json.Marshal(membershipRequest)
-// 	if err != nil {
-// 		_ = fmt.Errorf("Error: %s", err)
-// 		return
-// 	}
-// 	membershipRequest.Signature.Hash = sha256.Sum256([]byte(jsonString))
-// 	membershipRequest.Signature.Encryptedhash = ed25519.Sign(user.PrivateKey, []byte(membershipRequest.Signature.Hash[:]))
-//
-// 	if data.ConfirmMembershipRequest(membershipRequest) != Confirmed {
-// 		_ = fmt.Errorf("Error: Signature was not accepted")
-// 		return
-// 	}
-//
-// 	fmt.Println("New Membership Request was created !")
-// 	return
-// }
+func (user *User) SendMembershipReesponse(requestNumber int32, accepted bool) {
+
+	membershipRequest := data.GetMembershipRequest(requestNumber)
+
+	membershipResponse := MembershipResponse{}
+	membershipResponse.RequestNumber = requestNumber
+	membershipResponse.RequestHash = membershipRequest.Signature.Hash
+	membershipResponse.UserID = user.UserID
+	membershipResponse.Accepted = accepted
+
+	jsonString, err := json.Marshal(membershipResponse)
+	if err != nil {
+		_ = fmt.Errorf("Error: %s", err)
+		return
+	}
+	membershipResponse.Signature.Hash = sha256.Sum256([]byte(jsonString))
+	membershipResponse.Signature.Encryptedhash = ed25519.Sign(user.PrivateKey, []byte(membershipResponse.Signature.Hash[:]))
+
+	messageStatus := data.ConfirmMembershipResponse(membershipResponse)
+	if messageStatus == ConfirmationFailed {
+		_ = fmt.Errorf("Error: Signature was not accepted")
+		return
+	}
+
+	fmt.Println("Membership Request Got New Status !")
+	return
+}

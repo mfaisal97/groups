@@ -15,20 +15,6 @@ type Data string
 //type PublicKey []byte  //---> already implemented in crypto/ed25519
 //type PrivateKey []byte //---> already implemented in crypto/ed25519
 
-type Group struct {
-	//	Id          string
-	Name        string
-	Description string
-	// Data        map[RequestType]Data
-
-	Creator UserID
-
-	Members        []UserID
-	Memberships    map[Role][]UserID
-	Authorizations map[MembershipRequestType][]Role
-	//Membersauthorizations map[UserID][]RequestType
-}
-
 type DataBaseRequest struct {
 	RequestNum int32
 	Signature  Signature
@@ -59,13 +45,19 @@ type GroupCreationMessage struct {
 
 type MembershipRequest struct {
 	DataBaseRequest
-	UserID UserID
+	UserID         UserID
+	AffectedMember UserID
+	AffectedRole   Role
 	MembershipRequestType
 	GroupName string
 }
 
 type MembershipResponse struct {
-	Accepted bool
+	RequestNumber int32
+	RequestHash   [32]byte
+	UserID        UserID
+	Accepted      bool
+	Signature     Signature
 }
 
 type MembershipMessage struct {

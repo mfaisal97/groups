@@ -164,46 +164,48 @@ func (db *DataBase) ConfirmGroupCreationRequest(groupCreationRequest GroupCreati
 			return GroupCreationResponse{false}
 		}
 
-		//ensuring that each user exits once
-		set := make(map[UserID]bool)
-		for k := range groupCreationRequest.Group.Members {
-			set[groupCreationRequest.Group.Members[k]] = true
-		}
-		if len(set) != len(groupCreationRequest.Group.Members) {
-			fmt.Println("Error: Request Contains Reptited Members")
-			db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
-			db.GroupCreationMessages[requestNumber].MessageStatus = Failed
-			return GroupCreationResponse{false}
-		}
+		//ensuring that each user exits once		-->		Now a map is used already
+		// set := make(map[UserID]bool)
+		// for k := range groupCreationRequest.Group.Members {
+		// 	set[groupCreationRequest.Group.Members[k]] = true
+		// }
+		// if len(set) != len(groupCreationRequest.Group.Members) {
+		// 	fmt.Println("Error: Request Contains Reptited Members")
+		// 	db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+		// 	db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+		// 	return GroupCreationResponse{false}
+		// }
 
 		//ensuring all memebers are users
-		for k := range groupCreationRequest.Group.Members {
-			if _, exist := db.Users[groupCreationRequest.Group.Members[k]]; !exist {
-				fmt.Println("Error: Request Contains not registered Members")
-				db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
-				db.GroupCreationMessages[requestNumber].MessageStatus = Failed
-				return GroupCreationResponse{false}
+		for k, v := range groupCreationRequest.Group.Members {
+			if v {
+				if _, exist := db.Users[k]; !exist {
+					fmt.Println("Error: Request Contains not registered Members")
+					db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+					db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+					return GroupCreationResponse{false}
+				}
 			}
 		}
 
 		//ensuring that the members in each role are in the group members
-
 		for key, val := range groupCreationRequest.Group.Memberships {
 
-			set2 := make(map[UserID]bool)
-			for k := range val {
-				set[val[k]] = true
-			}
-			if len(set2) != len(val) {
-				fmt.Println("Error: Request Contains Reptited Members in Role:\t", key)
-				db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
-				db.GroupCreationMessages[requestNumber].MessageStatus = Failed
-				return GroupCreationResponse{false}
-			}
+			// Ensuring non reptited Users		--> using map now also
+			// set2 := make(map[UserID]bool)
+			// for k := range val {
+			// 	set[val[k]] = true
+			// }
+			// if len(set2) != len(val) {
+			// 	fmt.Println("Error: Request Contains Reptited Members in Role:\t", key)
+			// 	db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
+			// 	db.GroupCreationMessages[requestNumber].MessageStatus = Failed
+			// 	return GroupCreationResponse{false}
+			// }
 
 			//ensuring all role memebers are members
 			for k := range val {
-				if exist := set[val[k]]; !exist {
+				if !groupCreationRequest.Group.IsMember(k) {
 					fmt.Println("Error: Role members Contains non Members in Role:\t", key)
 					db.GroupCreationMessages[requestNumber].Response = GroupCreationResponse{false}
 					db.GroupCreationMessages[requestNumber].MessageStatus = Failed
@@ -275,45 +277,6 @@ func (db *DataBase) ConfirmMembershipRequest(membershipRequest MembershipRequest
 	return ConfirmationFailed
 }
 
-func (db *DataBase) GetRoles(userID UserID, groupName string) []Role {
-	group := db.Groups[groupName]
-	var roles []Role
-
-	for key, val := range group.Memberships {
-		for _, id := range val {
-			if userID == id {
-				roles = append(roles, key)
-				break
-			}
-		}
-	}
-
-	return roles
-}
-
-func (db *DataBase) GetAuthorizations(groupName string, roles []Role) []MembershipRequestType {
-	group := db.Groups[groupName]
-	var authorizations []MembershipRequestType
-
-	for key, val := range group.Authorizations {
-		Added := false
-		for _, role := range val {
-			for _, userRole := range roles {
-				if userRole == role {
-					authorizations = append(authorizations, key)
-					Added = true
-					break
-				}
-			}
-			if Added {
-				break
-			}
-		}
-	}
-
-	return authorizations
-}
-
 func (db *DataBase) GetPendingGroupRequests(groupName string) ([]int32, []MembershipRequest) {
 
 	var requestNumbers []int32
@@ -331,8 +294,8 @@ func (db *DataBase) GetPendingGroupRequests(groupName string) ([]int32, []Member
 
 func (db *DataBase) GetPendingRequests(userID UserID, groupName string) ([]int32, []MembershipRequest) {
 
-	roles := db.GetRoles(userID, groupName)
-	authorizations := db.GetAuthorizations(groupName, roles)
+	roles := db.Groups[groupName].GetRoles(userID)
+	authorizations := db.Groups[groupName].GetAuthorizations(roles)
 	_, groupRequests := db.GetPendingGroupRequests(groupName)
 
 	var requestNumbers []int32
@@ -348,4 +311,71 @@ func (db *DataBase) GetPendingRequests(userID UserID, groupName string) ([]int32
 		}
 	}
 	return requestNumbers, requests
+}
+
+func (db *DataBase) GetMembershipRequest(requestNumber int32) MembershipRequest {
+	return db.MembershipsMessages[requestNumber].Request
+}
+
+func (db *DataBase) ConfirmMembershipResponse(membershipResponse MembershipResponse) MessageStatus {
+
+	request := db.GetMembershipRequest(membershipResponse.RequestNumber)
+	requestNumbers, _ := db.GetPendingRequests(membershipResponse.UserID, request.GroupName)
+
+	found := false
+
+	for _, num := range requestNumbers {
+		if membershipResponse.RequestNumber == num {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		fmt.Printf("This UserID Does not have enough perimissions: %s", membershipResponse.UserID)
+		return ConfirmationFailed
+	}
+
+	newMembershipResponse := MembershipResponse{}
+	newMembershipResponse.RequestNumber = membershipResponse.RequestNumber
+	newMembershipResponse.RequestHash = request.Signature.Hash
+	newMembershipResponse.UserID = membershipResponse.UserID
+	newMembershipResponse.Accepted = membershipResponse.Accepted
+
+	jsonString, err := json.Marshal(newMembershipResponse)
+	if err != nil {
+		_ = fmt.Errorf("Error: %s", err)
+		return ConfirmationFailed
+	}
+	newMembershipResponse.Signature.Hash = sha256.Sum256([]byte(jsonString))
+
+	if newMembershipResponse.Signature.Hash == membershipResponse.Signature.Hash &&
+		ed25519.Verify(db.Users[newMembershipResponse.UserID], []byte(newMembershipResponse.Signature.Hash[:]), newMembershipResponse.Signature.Encryptedhash) {
+		newMembershipResponse.Signature.Encryptedhash = membershipResponse.Signature.Encryptedhash
+		db.MembershipsMessages[newMembershipResponse.RequestNumber].Response = newMembershipResponse
+
+		if newMembershipResponse.Accepted {
+			db.MembershipsMessages[newMembershipResponse.RequestNumber].MessageStatus = Succeeded
+			//now apply updates
+			switch request.MembershipRequestType {
+			case Join:
+				{
+					group := db.Groups[request.GroupName]
+					group.AddMemberInRole(request.AffectedMember, request.AffectedRole)
+				}
+			case Remove:
+				{
+					group := db.Groups[request.GroupName]
+					group.RemoveMemberInRole(request.AffectedMember, request.AffectedRole)
+				}
+			}
+		} else {
+			db.MembershipsMessages[newMembershipResponse.RequestNumber].MessageStatus = Failed
+		}
+
+		defer db.SaveData(db.FileName)
+		return db.MembershipsMessages[newMembershipResponse.RequestNumber].MessageStatus
+	}
+
+	return ConfirmationFailed
 }
