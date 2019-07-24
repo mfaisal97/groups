@@ -274,3 +274,78 @@ func (db *DataBase) ConfirmMembershipRequest(membershipRequest MembershipRequest
 
 	return ConfirmationFailed
 }
+
+func (db *DataBase) GetRoles(userID UserID, groupName string) []Role {
+	group := db.Groups[groupName]
+	var roles []Role
+
+	for key, val := range group.Memberships {
+		for _, id := range val {
+			if userID == id {
+				roles = append(roles, key)
+				break
+			}
+		}
+	}
+
+	return roles
+}
+
+func (db *DataBase) GetAuthorizations(groupName string, roles []Role) []MembershipRequestType {
+	group := db.Groups[groupName]
+	var authorizations []MembershipRequestType
+
+	for key, val := range group.Authorizations {
+		Added := false
+		for _, role := range val {
+			for _, userRole := range roles {
+				if userRole == role {
+					authorizations = append(authorizations, key)
+					Added = true
+					break
+				}
+			}
+			if Added {
+				break
+			}
+		}
+	}
+
+	return authorizations
+}
+
+func (db *DataBase) GetPendingGroupRequests(groupName string) ([]int32, []MembershipRequest) {
+
+	var requestNumbers []int32
+	var requests []MembershipRequest
+
+	for _, message := range db.MembershipsMessages {
+		if message.MessageStatus == Confirmed && message.Request.GroupName == groupName {
+			requestNumbers = append(requestNumbers, message.Request.RequestNum)
+			requests = append(requests, message.Request)
+		}
+	}
+
+	return requestNumbers, requests
+}
+
+func (db *DataBase) GetPendingRequests(userID UserID, groupName string) ([]int32, []MembershipRequest) {
+
+	roles := db.GetRoles(userID, groupName)
+	authorizations := db.GetAuthorizations(groupName, roles)
+	_, groupRequests := db.GetPendingGroupRequests(groupName)
+
+	var requestNumbers []int32
+	var requests []MembershipRequest
+
+	for _, request := range groupRequests {
+		for _, requesttype := range authorizations {
+			if requesttype == request.MembershipRequestType {
+				requestNumbers = append(requestNumbers, request.RequestNum)
+				requests = append(requests, request)
+				break
+			}
+		}
+	}
+	return requestNumbers, requests
+}

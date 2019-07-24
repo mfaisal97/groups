@@ -63,7 +63,7 @@ func CreateNewUser(userid UserID) User {
 }
 
 func (user *User) LoadData(userid UserID) {
-	userFile, err := os.Open(string(userid) + ".json")
+	userFile, err := os.Open("Users/" + string(userid) + ".json")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -77,7 +77,7 @@ func (user *User) LoadData(userid UserID) {
 
 func (user *User) SaveUser(userid UserID) {
 	file, _ := json.MarshalIndent(user, "", " ")
-	_ = ioutil.WriteFile(string(userid)+".json", file, 0644)
+	_ = ioutil.WriteFile("Users/"+string(userid)+".json", file, 0644)
 	return
 }
 
@@ -144,3 +144,40 @@ func (user *User) SendMembershipRequest(membershipRequestType MembershipRequestT
 	fmt.Println("New Membership Request was created !")
 	return
 }
+
+func (user *User) GetPendingRequests(groupName string) ([]int32, []MembershipRequest) {
+	return data.GetPendingRequests(user.UserID, groupName)
+}
+
+// func (user *User) SendMembershipReesponse(membershipRequestType MembershipRequestType, group string) {
+//
+// 	membershipRequest := MembershipRequest{}
+// 	membershipRequest.UserID = user.UserID
+// 	membershipRequest.GroupName = group
+// 	membershipRequest.MembershipRequestType = membershipRequestType
+//
+// 	requestNum := data.GetMembershipRequestNumber(membershipRequest)
+// 	if requestNum == -1 {
+// 		_ = fmt.Errorf("Couldnot Get Request Number for New Group Creation")
+// 		return
+// 	}
+// 	fmt.Println("Got Request Number:\t\t", requestNum)
+//
+// 	membershipRequest.RequestNum = requestNum
+//
+// 	jsonString, err := json.Marshal(membershipRequest)
+// 	if err != nil {
+// 		_ = fmt.Errorf("Error: %s", err)
+// 		return
+// 	}
+// 	membershipRequest.Signature.Hash = sha256.Sum256([]byte(jsonString))
+// 	membershipRequest.Signature.Encryptedhash = ed25519.Sign(user.PrivateKey, []byte(membershipRequest.Signature.Hash[:]))
+//
+// 	if data.ConfirmMembershipRequest(membershipRequest) != Confirmed {
+// 		_ = fmt.Errorf("Error: Signature was not accepted")
+// 		return
+// 	}
+//
+// 	fmt.Println("New Membership Request was created !")
+// 	return
+// }
