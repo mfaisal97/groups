@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -28,12 +27,12 @@ func ResetDataBase(c *cli.Context) {
 }
 
 func CreateUser(c *cli.Context) {
-	if c.NArg() != 1 {
-		_ = errors.New("please give the following argument: UserID")
-		return
-	}
-	userid := c.Args().First()
-	_ = CreateNewUser(UserID(userid))
+	// if c.NArg() != 1 {
+	// 	_ = errors.New("please give the following argument: UserID")
+	// 	return
+	// }
+	// userid := c.Args().First()
+	_ = CreateNewUser(UserID(userID))
 }
 
 func CreateGroup(c *cli.Context) {
@@ -89,7 +88,8 @@ func ReplyRequest(c *cli.Context) {
 func GetRequests(c *cli.Context) {
 	user := User{}
 	user.LoadData(UserID(userID))
-	user.GetPendingRequests(groupName)
+	x, y := user.GetPendingRequests(groupName)
+	fmt.Println("Etfadl ya Taha:\t", x, y)
 }
 
 func main() {
@@ -132,7 +132,7 @@ func main() {
 			Action: ReplyRequest,
 		},
 		{
-			Name:   "GetRequests",
+			Name:   "getRequests",
 			Usage:  "Get all possible requests to reply to in a group",
 			Action: GetRequests,
 		},
@@ -140,7 +140,7 @@ func main() {
 
 	cliApp.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:        "user, u",
+			Name:        "userID, u",
 			Usage:       "userID the member initiating the command",
 			Destination: &userID,
 		},

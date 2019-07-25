@@ -32,6 +32,7 @@ func InitializeDataBase() DataBase {
 	var db DataBase
 
 	db.Users = make(map[UserID]ed25519.PublicKey, 0)
+	db.Groups = make(map[string]Group)
 	db.GroupCreationIndex = 0
 	db.MembershipIndex = 0
 	db.UsersIndex = 0
@@ -246,7 +247,7 @@ func (db *DataBase) GetMembershipRequestNumber(membershipRequest MembershipReque
 	}
 
 	newMembershipMessage.Request.Signature.Hash = sha256.Sum256([]byte(jsonString))
-	newMembershipMessage.MessageStatus = 0
+	newMembershipMessage.MessageStatus = Received
 
 	db.MembershipsMessages = append(db.MembershipsMessages, newMembershipMessage)
 
