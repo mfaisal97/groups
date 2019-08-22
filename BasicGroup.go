@@ -2,10 +2,11 @@ package main
 
 //All functions assert that the requested change actually is applied but the boolean return is to indicate if a change was required to finalize this request
 
-
 type RequestHandler func(args ...interface{}) interface{}
 
-
+//Basic Structure to handle a group logic
+//modifier functions return a boolean
+//it indicates if the request required a change in the group
 type BasicGroup struct {
 	Name        string //A name to be given to the group
 	Description string //Descripes the main aims of the group
@@ -24,31 +25,61 @@ type BasicGroup struct {
 	//First Key is the request type name
 	//second key is the member userID
 	Authorizations map[string]map[string]struct{}
+
+	//stores function pointers to the function to be called when a group request is approved
+	RequestHandlers map[string]RequestHandler
 }
 
 //Checks if the user is a general member in the group
 func (group *BasicGroup) IsMember(userID string) bool {
-	_, exist := group.Members[userID];
+	_, exist := group.Members[userID]
 	return exist
 }
 
-//Checks if the role is in the group
+//Checks if the role is a valid role in the group
 func (group *BasicGroup) IsRole(role string) bool {
-	_, exist := group.Memberships[role];
+	_, exist := group.Memberships[role]
+	return exist
+}
+
+//Checks if the request type is a valid request type in the group
+func (group *BasicGroup) IsRequestType(requestType string) bool {
+	_, exist := group.Authorizations[requestType]
 	return exist
 }
 
 //checks if the user is a member in a certain role
 func (group *BasicGroup) IsMemberInRole(userID string, role Role) bool {
 	if group.IsRole(role){
-		_, exist := group.Memberships[role][userID];
+		_, exist := group.Memberships[role][userID]
 		return exist
 	}
 	return false
 }
 
+//Checks if the request type is a valid request type in the group
+func (group *BasicGroup) IsAuthorizedRole(role string, requestType string) bool {
+	if group.IsRequestType(requestType){
+		_, exist := group.Authorizations[requestType][role]
+		return exist
+	}
+	return false
+}
+
+//Checks if the request type is a valid request type in the group
+func (group *BasicGroup) IsAuthorizedMember(userID string, requestType string) bool {
+	if group.IsRequestType(requestType) && group.IsMember(userID){
+		for key, val := range group.Authorizations[requestType]{
+			if group.IsMemberInRole(userID, key){
+				return true
+			}
+		}
+	}
+	return false
+}
+
 //Adds a user to the general Members list in the group
-func (group *BasicGroup) AddMember(userID string) bool {
+func (group *BasicGroup) addMember(userID string) bool {
 	if ! group.IsMember(userID){
 		group.Members[userID] = struct{}
 		return true
@@ -79,7 +110,7 @@ func (group *BasicGroup) AddInRole(userIDs []string, role string) bool {
 
 //Remove a user from the group members
 //and hence removes the user from any role
-func (group *BasicGroup) RemoveMember(userID string) bool {
+func (group *BasicGroup) removeMember(userID string) bool {
 	if group.IsMember(userID){
 		for key, _ := range group.Memberships {
 			delete(group.Memberships[key], userID)
@@ -87,7 +118,6 @@ func (group *BasicGroup) RemoveMember(userID string) bool {
 		delete(group.Members, userID)
 		return true;
 	}
-
 	return false
 }
 
@@ -110,13 +140,14 @@ func (group *BasicGroup) RemoveMemberInRole(userID string, role Role) bool {
 //If the role already exists nothing happens
 func (group *BasicGroup) AddRole(role string)bool {
 	if !group.IsRole(role){
-		group.Memberships[role] = make(map[string]struct{}, 0)
+		group.Memberships[role] = make(map[string]struct{})
 		return true
 	}
 	return false
 }
 
 //removes an existing role in the group
+//This Role will lose authorization to all request types
 //Therefore all members existing in only this role will be removed from the general members list
 func (group *BasicGroup) RemoveRole(role string) bool {
 	if group.IsRole(role){
@@ -125,7 +156,13 @@ func (group *BasicGroup) RemoveRole(role string) bool {
 				delete(group.Members, key)
 			}
 		}
+
+		for key, val := range group.Authorizations{
+			delete(group.Authorizations[key], role)
+		}
+
 		delete(group.Memberships, role)
+
 		return true
 	}
 	return false
@@ -142,7 +179,7 @@ func (group *BasicGroup) MergeRoles(roleOne string, roleTwo string, newRole stri
 	if !keepOld{
 		change = change || group.RemoveRole(roleOne) || group.RemoveRole(roleTwo)
 	}
-	
+
 	return change
 }
 
@@ -150,75 +187,127 @@ func (group *BasicGroup) MergeRoles(roleOne string, roleTwo string, newRole stri
 //If one already exists, it oevrwrites it
 //Only existing roles will be added to manage the new request type
 func (group *BasicGroup) AddRequestType(requestType string, managingRoles []string, successFunction RequestHandler) bool {
+	group.RemoveRequestType(requestType)
+	group.Authorizations[requestType] = make(map[string]struct{})
+	group.RequestHandlers[requestType] = successFunction
+	group.AuthorizeForRequestType(managingRoles, requestType)
+
+	return true
 }
 
 //Remove an existing request type
 func (group *BasicGroup) RemoveRequestType(requestType string) bool {
+	if group.IsRequestType(requestType){
+		delete(group.Authorizations, requestType)
+		delete(group.RequestHandlers, requestType)
+		return true
+	}
+	return false
 }
 
 //Authorize a role to manage an existing type of requests
 func (group *BasicGroup) AuthorizeRoleForRequestType(role string, requestType string) bool {
+	if group.IsRole(role) && group.IsRequestType(requestType){
+		group.Authorizations[requestType][role] = struct{}
+		return true
+	}
+	return false
+}
+
+//Authorize a list of roles to manage an existing type of requests
+func (group *BasicGroup) AuthorizeForRequestType(roles []string, requestType string) bool {
+	change := false
+	for role := range roles {
+		change = change || group.AuthorizeRoleForRequestType(role, requestType)
+	}
+
+	return change
 }
 
 //Unauthorize a role from managing an existing type of requests
 func (group *BasicGroup) UnauthorizeRoleFromRequestType(role string, requestType string) bool {
+	if group.IsAuthorizedRole(role, requestType){
+		delete(group.Authorizations[requestType], role)
+		return true
+	}
+	return false
 }
 
+//Remove an existing request type
+func (group *BasicGroup) HandleRequestType(requestType string, args...interface{}) (interface{}, bool) {
+	if group.IsRequestType(requestType){
+		return group.RequestHandlers[requestType](args...), true
+	}
+	return nil, false
+}
 
 //Important getters
 
-//Gets All the roles authorized to handle an existing request type
-func (group *BasicGroup) GetRolesForRequestType(args ...interface{}) bool {
-}
-
-
-//Gets All the members belonging to at least one existing role in a set of roles
-func (group *BasicGroup) GetMembersInRoles(args ...interface{}) bool {
-}
-
-//Gets All the members authorized to handle an existing request type
-func (group *BasicGroup) GetMembersForRequestType(args ...interface{}) bool {
-}
-
-
 //Gets all the roles to which a member belongs
-func (group BasicGroup) GetMememberRoles(userID string) []Role {
-	var roles []Role
+func (group BasicGroup) GetRolesForMemember(userID string) []Role {
+	roles := make([]string, 0)
 
-	for key, val := range group.Memberships {
-		if val[userID] {
-			roles = append(roles, key)
+	if (group.IsMember(userID)){
+		for key, val := range group.Memberships {
+			if group.IsMemberInRole(userID, key){
+				roles = append(roles, key)
+			}
 		}
 	}
-
 	return roles
 }
 
 
 //Gets all the request types that a member can handle
-func (group BasicGroup) GetRequestTypesForMember(userRoles []Role) []MembershipRequestType {
-	var authorizations []MembershipRequestType
+func (group BasicGroup) GetRequestTypesForMember(userID string) []string {
+	authorizations := make([]string, 0)
 
 	for key, roles := range group.Authorizations {
-		Added := false
-		for role, val := range roles {
-			if val {
-				for _, userRole := range userRoles {
-					if userRole == role {
-						authorizations = append(authorizations, key)
-						Added = true
-						break
-					}
-				}
-				if Added {
-					break
-				}
-			}
+		if group.IsAuthorizedMember(userID, key){
+				authorizations = append(authorizations, key)
 		}
 	}
 
 	return authorizations
 }
+
+//Gets All the roles authorized to handle an existing request type
+func (group *BasicGroup) GetRolesForRequestType(requestType string) []string {
+	if group.IsRequestType(requestType){
+		roles := make([]string,0, len(group.Authorizations[requestType]))
+		for key, val := range group.Authorizations[requestType]{
+				roles = append(roles, key)
+		}
+		return roles
+	}
+	return make([]string, 0)
+}
+
+//Gets All the members belonging to at least one existing role in a set of roles
+func (group *BasicGroup) GetMembersInRoles(args ...interface{}) []string {
+	members:= make(map[string]struct{})
+	for role := range args{
+		if group.IsRole(role){
+			for userID, val := range group.Memberships[role]{
+				members[userID] = struct{}
+			}
+		}
+	}
+	membersList := make([]string,0, len(members))
+	for key, val := range members{
+		membersList = append(membersList, key)
+	}
+
+	return membersList
+}
+
+//Gets All the members authorized to handle an existing request type
+func (group *BasicGroup) GetMembersForRequestType(requestType string) []string {
+	return group.GetMembersInRoles(group.GetRolesForRequestType(requestType)...)
+}
+
+
+
 
 
 //this is in the in other layer
