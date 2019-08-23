@@ -45,8 +45,8 @@ func CreateNewBasicGroup(groupName string, description string, creator string) B
 	return group
 }
 
-//Changes the name of the creator of the group
-//Valid only for the first time during
+//SetCreatorName Changes the name of the creator of the group
+//Valid only for the first time during.
 func (group *BasicGroup) SetCreatorName(name string) bool {
 	if group.Creator == "" {
 		group.Creator = name
