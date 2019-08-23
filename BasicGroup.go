@@ -5,9 +5,9 @@ package main
 type RequestHandler func(args ...interface{}) interface{}
 type EmptyStruct struct{}
 
-//Basic Structure to handle a group logic
-//modifier functions return a boolean
-//it indicates if the request required a change in the group
+// Basic Structure to handle a group logic
+// modifier functions return a boolean
+// it indicates whether the request required a change in the group
 type BasicGroup struct {
 	Name        string //A name to be given to the group
 	Description string //Descripes the main aims of the group
@@ -46,6 +46,7 @@ func CreateNewBasicGroup(groupName string, description string, creator string) B
 }
 
 //Changes the name of the creator of the group
+//Valid only for the first time during
 func (group *BasicGroup) SetCreatorName(name string) bool {
 	if group.Creator == "" {
 		group.Creator = name
