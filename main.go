@@ -1,14 +1,6 @@
-package main
+package groups
 
-import (
-	"fmt"
-	"log"
-	"os"
-	"strings"
-
-	"github.com/urfave/cli"
-)
-
+/*
 //global variables
 var data DataBase
 var userID string
@@ -202,4 +194,8 @@ func main() {
 
 	data.SaveData("Data/data.json")
 	fmt.Println("Ending\t", data, "\n\n")
+}
+*/
+func main() {
+	//	fmt.Println("Hello World")
 }

@@ -1,4 +1,4 @@
-package main
+package groups
 
 import "golang.org/x/crypto/ed25519"
 
@@ -30,7 +30,7 @@ type DataBaseMessage struct {
 
 type GroupCreationRequest struct {
 	DataBaseRequest
-	Group Group
+	Group BasicGroup
 }
 
 type GroupCreationResponse struct {
@@ -45,8 +45,8 @@ type GroupCreationMessage struct {
 
 type MembershipRequest struct {
 	DataBaseRequest
-	UserID         UserID
-	AffectedMember UserID
+	UserID         string
+	AffectedMember string
 	AffectedRole   Role
 	MembershipRequestType
 	GroupName string
@@ -55,7 +55,7 @@ type MembershipRequest struct {
 type MembershipResponse struct {
 	RequestNumber int32
 	RequestHash   [32]byte
-	UserID        UserID
+	UserID        string
 	Accepted      bool
 	Signature     Signature
 }
@@ -68,7 +68,7 @@ type MembershipMessage struct {
 
 type UserRequest struct {
 	DataBaseRequest
-	UserID     UserID
+	UserID     string
 	PubllicKey ed25519.PublicKey
 }
 

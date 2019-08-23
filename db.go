@@ -1,21 +1,11 @@
-package main
+package groups
 
-import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-
-	"crypto/sha256"
-
-	"golang.org/x/crypto/ed25519"
-)
-
+/*
 //stores all valid reqeusts and replies and verify sender.
 type DataBase struct {
 	FileName string
 
-	Groups map[string]Group
+	Groups map[string]BasicGroup
 	Users  map[UserID]ed25519.PublicKey
 
 	GroupCreationMessages []GroupCreationMessage
@@ -380,3 +370,4 @@ func (db *DataBase) ConfirmMembershipResponse(membershipResponse MembershipRespo
 
 	return ConfirmationFailed
 }
+*/

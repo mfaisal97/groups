@@ -1,17 +1,6 @@
-package main
+package groups
 
-import (
-	"crypto/sha256"
-	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"os"
-
-	"golang.org/x/crypto/ed25519"
-)
-
+/*
 type UserID string
 
 type User struct {
@@ -178,3 +167,4 @@ func (user *User) SendMembershipReesponse(requestNumber int32, accepted bool) {
 	fmt.Println("Membership Request Got New Status !")
 	return
 }
+*/
