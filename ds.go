@@ -1,7 +1,6 @@
 package groups
 
-import "golang.org/x/crypto/ed25519"
-
+/*
 //alternatives
 type Role string
 
@@ -113,3 +112,4 @@ const (
 	Join   MembershipRequestType = 0
 	Remove MembershipRequestType = 1
 )
+*/
