@@ -1,8 +1,11 @@
 package main
 
-//All functions assert that the requested change actually is applied but the boolean return is to indicate if a change was required to finalize this request
+// All functions assert that the requested change actually is applied but the boolean return is to indicate if a change was required to finalize this request
 
+// RequestHandler defines the paramters and return of a request type handler
 type RequestHandler func(args ...interface{}) interface{}
+
+// EmptyStruct defines an empty struct to be used in sets implementation
 type EmptyStruct struct{}
 
 // BasicGroup Structure to handle a group logic
@@ -45,8 +48,8 @@ func CreateNewBasicGroup(groupName string, description string, creator string) B
 	return group
 }
 
-//SetCreatorName Changes the name of the creator of the group
-//Valid only for the first time during.
+// SetCreatorName Changes the name of the creator of the group
+// Valid only for the first time during.
 func (group *BasicGroup) SetCreatorName(name string) bool {
 	if group.Creator == "" {
 		group.Creator = name
