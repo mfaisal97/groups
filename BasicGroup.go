@@ -5,7 +5,7 @@ package main
 type RequestHandler func(args ...interface{}) interface{}
 type EmptyStruct struct{}
 
-// Basic Structure to handle a group logic
+// BasicGroup Structure to handle a group logic
 // modifier functions return a boolean
 // it indicates whether the request required a change in the group
 type BasicGroup struct {
