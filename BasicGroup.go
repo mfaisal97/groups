@@ -32,6 +32,12 @@ type BasicGroup struct {
 
 	//stores function pointers to the function to be called when a group request is approved
 	RequestHandlers map[string]func(args ...interface{}) interface{}
+
+	DefaultVerifyResponse func(responseMessage ResponseMessage, previousResponses map[string]ResponseMessage, userIDs []string) (MessageStatus, map[string]ResponseMessage)
+	VerifyResponse        map[string]func(responseMessage ResponseMessage, previousResponses map[string]ResponseMessage, userIDs []string) (MessageStatus, map[string]ResponseMessage)
+
+	DefaultVerifyRequest func(request Request, signature interface{}) RequestStatus
+	VerifyRequest        map[string]func(request Request, signature interface{}) RequestStatus
 }
 
 func CreateNewBasicGroup(groupName string, description string, creator string) BasicGroup {
@@ -43,9 +49,21 @@ func CreateNewBasicGroup(groupName string, description string, creator string) B
 	group.Members = make(map[string]EmptyStruct)
 	group.Memberships = make(map[string]map[string]EmptyStruct)
 	group.Authorizations = make(map[string]map[string]EmptyStruct)
+	group.VerifyRequest = make(map[string]func(request Request, signature interface{}) RequestStatus)
+	group.VerifyResponse = make(map[string]func(responseMessage ResponseMessage, previousResponses map[string]ResponseMessage, userIDs []string) (MessageStatus, map[string]ResponseMessage))
 	group.RequestHandlers = make(map[string]func(args ...interface{}) interface{})
 
 	return group
+}
+
+func (group *BasicGroup) SetDefaultVerifyRequest(verifyRequest func(request Request, signature interface{}) RequestStatus) bool {
+	group.DefaultVerifyRequest = verifyRequest
+	return true
+}
+
+func (group *BasicGroup) SetDefaultVerifyResponse(verifyResponse func(responseMessage ResponseMessage, previousResponses map[string]ResponseMessage, userIDs []string) (MessageStatus, map[string]ResponseMessage)) bool {
+	group.DefaultVerifyResponse = verifyResponse
+	return true
 }
 
 // SetCreatorName Changes the name of the creator of the group
@@ -250,10 +268,16 @@ func (group *BasicGroup) MergeRoles(roleOne string, roleTwo string, newRole stri
 //Add new request type in the group
 //If one already exists, it oevrwrites it
 //Only existing roles will be added to manage the new request type
-func (group *BasicGroup) AddRequestType(requestType string, managingRoles []string, successFunction func(args ...interface{}) interface{}) bool {
+func (group *BasicGroup) AddRequestType(requestType string, managingRoles []string, successFunction func(args ...interface{}) interface{}, verifyRequest func(request Request, signature interface{}) RequestStatus, verifyResponse func(responseMessage ResponseMessage, previousResponses map[string]ResponseMessage, userIDs []string) (MessageStatus, map[string]ResponseMessage)) bool {
 	group.RemoveRequestType(requestType)
 	group.Authorizations[requestType] = make(map[string]EmptyStruct)
 	group.RequestHandlers[requestType] = successFunction
+	if verifyRequest != nil {
+		group.VerifyRequest[requestType] = verifyRequest
+	}
+	if verifyResponse != nil {
+		group.VerifyResponse[requestType] = verifyResponse
+	}
 	group.AuthorizeForRequestType(managingRoles, requestType)
 
 	return true
@@ -264,6 +288,8 @@ func (group *BasicGroup) RemoveRequestType(requestType string) bool {
 	if group.IsRequestType(requestType) {
 		delete(group.Authorizations, requestType)
 		delete(group.RequestHandlers, requestType)
+		delete(group.VerifyRequest, requestType)
+		delete(group.VerifyResponse, requestType)
 		return true
 	}
 	return false
@@ -308,7 +334,7 @@ func (group *BasicGroup) HandleRequestType(requestType string, args ...interface
 //Important getters
 
 //Gets all the roles to which a member belongs
-func (group BasicGroup) GetRolesForMemember(userID string) []string {
+func (group *BasicGroup) GetRolesForMemember(userID string) []string {
 	roles := make([]string, 0)
 
 	if group.IsMember(userID) {
@@ -322,7 +348,7 @@ func (group BasicGroup) GetRolesForMemember(userID string) []string {
 }
 
 //Gets all the request types that a member can handle
-func (group BasicGroup) GetRequestTypesForMember(userID string) []string {
+func (group *BasicGroup) GetRequestTypesForMember(userID string) []string {
 	authorizations := make([]string, 0)
 
 	for key, _ := range group.Authorizations {
@@ -368,10 +394,3 @@ func (group *BasicGroup) GetMembersInRoles(args ...string) []string {
 func (group *BasicGroup) GetMembersForRequestType(requestType string) []string {
 	return group.GetMembersInRoles(group.GetRolesForRequestType(requestType)...)
 }
-
-//this is in the in other layer
-//Get MemberPendingRequests
-//Add Request
-//Add a response
-//GetRequestNumber
-//GetResponseNumber
