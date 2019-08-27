@@ -114,6 +114,18 @@ const (
 )
 */
 
+type UserInfo struct {
+	UserID     string
+	PublicKey  interface{}
+	PrivateKey interface{}
+}
+
+type GroupMemberInfo struct {
+	PendingRequests []Message
+	SignRequest     func(request Request, userInfo UserInfo) interface{}
+	SignResponse    func(response Response, userInfo UserInfo, userIDs []string) interface{}
+}
+
 type Request struct {
 	RequestName      string
 	RandomIdentifier int
