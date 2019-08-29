@@ -10,13 +10,14 @@ func sum(args ...interface{}) interface{} {
 }
 
 func TestBasicgroup(t *testing.T) {
+	fmt.Println("Starting Test One: \t\t Testing BasicGroup Class")
 
 	passedTestsNum := 0
 	totalTests := 10
 	printObjects := true
 
 	//Initializing import
-	group := CreateNewBasicGroup("groupName", "description", "creator")
+	group := CreateNewBasicGroup("groupName", "description", "creator", nil, nil)
 	group.SetCreatorName("AnotherName")
 	if group.GetName() == "groupName" && group.GetDescription() == "description" && group.GetCreatorName() == "creator" {
 		passedTestsNum++
@@ -37,7 +38,7 @@ func TestBasicgroup(t *testing.T) {
 	group.AddInRole(toNonmembers, "NonAdmins")
 	managingRoles := make([]string, 0, 1)
 	managingRoles = append(managingRoles, "NonAdmins")
-	group.AddRequestType("requestType", managingRoles, sum)
+	group.AddRequestType("requestType", managingRoles, sum, nil, nil)
 	if !group.IsMember("mickey") && !group.IsRole("Admins") && len(group.GetRolesForRequestType("requestType")) == 0 && len(group.GetRolesForRequestType("NorequestType")) == 0 {
 		passedTestsNum++
 		fmt.Println("Adding members in non existing roles passed:\t mickey/John,Mike,Mike >> Admins \t\t", passedTestsNum, "of", totalTests)
