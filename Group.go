@@ -12,6 +12,16 @@ func (group *Group) recordMessage(message interface{}) {
 	group.AllMessages = append(group.AllMessages, message)
 }
 
+func CreateNewGroup(groupName string, description string, creator string, defaultVerifyRequest func(request Request, signature interface{}) RequestStatus, defaultVerifyResponse func(responseMessage ResponseMessage, previousResponses map[string]ResponseMessage, userIDs []string) (MessageStatus, map[string]ResponseMessage)) Group {
+	group := Group{}
+	group.BasicGroup = CreateNewBasicGroup(groupName, description, creator, defaultVerifyRequest, defaultVerifyResponse)
+	group.Messages = make(map[string]Message)
+	group.AllMessages = make([]interface{}, 0)
+	group.PendingRequests = make(map[string]map[string]EmptyStruct)
+
+	return group
+}
+
 //Authorized members are specified on request delivery
 //Execution is applied after authorized members approval and if the request type is stil valid
 

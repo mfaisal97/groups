@@ -2,9 +2,6 @@ package groups
 
 // All functions assert that the requested change actually is applied but the boolean return is to indicate if a change was required to finalize this request
 
-// RequestHandler defines the paramters and return of a request type handler
-type RequestHandler func(args ...interface{}) interface{}
-
 // EmptyStruct defines an empty struct to be used in sets implementation
 type EmptyStruct struct{}
 
@@ -27,7 +24,7 @@ type BasicGroup struct {
 
 	//Stores which roles can handle each request type
 	//First Key is the request type name
-	//second key is the member userID
+	//second key is the role
 	Authorizations map[string]map[string]EmptyStruct
 
 	//stores function pointers to the function to be called when a group request is approved
@@ -40,11 +37,13 @@ type BasicGroup struct {
 	VerifyRequest        map[string]func(request Request, signature interface{}) RequestStatus
 }
 
-func CreateNewBasicGroup(groupName string, description string, creator string) BasicGroup {
+func CreateNewBasicGroup(groupName string, description string, creator string, defaultVerifyRequest func(request Request, signature interface{}) RequestStatus, defaultVerifyResponse func(responseMessage ResponseMessage, previousResponses map[string]ResponseMessage, userIDs []string) (MessageStatus, map[string]ResponseMessage)) BasicGroup {
 	group := BasicGroup{}
 	group.SetName(groupName)
 	group.SetDescription(description)
 	group.SetCreatorName(creator)
+	group.SetDefaultVerifyRequest(defaultVerifyRequest)
+	group.SetDefaultVerifyResponse(defaultVerifyResponse)
 
 	group.Members = make(map[string]EmptyStruct)
 	group.Memberships = make(map[string]map[string]EmptyStruct)
